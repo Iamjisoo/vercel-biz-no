@@ -12,30 +12,17 @@
       background: #fafafa;
       color: #111;
     }
-    .wrap {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 28px;
-    }
-    h1 {
-      font-size: 22px;
-      margin: 0 0 14px;
-    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 28px; }
+    h1 { font-size: 22px; margin: 0 0 14px; }
     .card {
       background: #fff;
       border: 1px solid #e8e8e8;
       border-radius: 14px;
       padding: 18px;
     }
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     input {
-      flex: 1;
-      min-width: 240px;
+      flex: 1; min-width: 240px;
       padding: 12px 14px;
       border: 1px solid #ddd;
       border-radius: 10px;
@@ -50,33 +37,13 @@
       background: #111;
       color: #fff;
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .hint {
-      color: #666;
-      font-size: 13px;
-      margin-top: 10px;
-    }
-    .out {
-      margin-top: 14px;
-      white-space: pre-wrap;
-      line-height: 1.65;
-    }
-    .ok {
-      color: #111;
-    }
-    .err {
-      color: #c00;
-    }
-    .footer {
-      color: #888;
-      font-size: 12px;
-      margin-top: 14px;
-    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint { color: #666; font-size: 13px; margin-top: 10px; }
+    .out { margin-top: 14px; white-space: pre-wrap; line-height: 1.65; }
+    .ok { color: #111; }
+    .err { color: #c00; }
+    .footer { color: #888; font-size: 12px; margin-top: 14px; }
 
-    /* ✅ 로고 그리드 */
     .logos {
       margin-top: 14px;
       display: grid;
@@ -101,10 +68,7 @@
       color: #666;
       word-break: break-all;
     }
-    .logoType {
-      font-weight: 600;
-      color: #111;
-    }
+    .logoType { font-weight: 600; color: #111; }
   </style>
 </head>
 
@@ -114,11 +78,7 @@
 
     <div class="card">
       <div class="row">
-        <input
-          id="bizNo"
-          placeholder="예) 6848103629"
-          inputmode="numeric"
-        />
+        <input id="bizNo" placeholder="예) 6848103629" inputmode="numeric" />
         <button id="btn">조회</button>
       </div>
 
@@ -128,7 +88,6 @@
       <div id="result" class="out ok"></div>
       <div id="error" class="out err"></div>
 
-      <!-- ✅ 로고 출력 영역 -->
       <div id="logos" class="logos"></div>
 
       <div class="footer">Powered by n8n + Bizno + Google CSE</div>
@@ -136,9 +95,8 @@
   </div>
 
   <script>
-    // ✅ n8n Production Webhook URL로 교체
     const WEBHOOK_URL =
-      "https://zighangmanager.app.n8n.cloud/webhook/company-summary";
+      "https://zighangmanager.app.n8n.cloud/webhook/company-summary"; // 네 Production Webhook
 
     const $bizNo = document.getElementById("bizNo");
     const $btn = document.getElementById("btn");
@@ -149,10 +107,8 @@
 
     function renderLogos(logoCandidates = []) {
       $logos.innerHTML = "";
-
       if (!Array.isArray(logoCandidates) || logoCandidates.length === 0) return;
 
-      // 보기 좋게 정렬 (로고스러운 것 먼저)
       const priority = {
         "jsonld-org-logo": 1,
         "logo-img": 2,
@@ -182,8 +138,6 @@
         img.src = c.url;
         img.alt = c.type || "logo";
         img.loading = "lazy";
-
-        // 깨지는 이미지는 자동으로 제거
         img.onerror = () => card.remove();
 
         const meta = document.createElement("div");
@@ -208,10 +162,8 @@
         $error.textContent = "사업자등록번호를 입력해주세요.";
         return;
       }
-
       if (bizNo.length !== 10) {
-        $error.textContent =
-          "사업자등록번호는 보통 10자리예요. (예: 6848103629)";
+        $error.textContent = "사업자등록번호는 보통 10자리예요. (예: 6848103629)";
         return;
       }
 
@@ -225,31 +177,39 @@
           body: JSON.stringify({ bizNo }),
         });
 
-        const data = await res.json().catch(() => null);
+        const raw = await res.text(); // ✅ 먼저 text로 받기
+        let data = null;
+
+        try {
+          data = raw ? JSON.parse(raw) : null; // ✅ 그 다음 JSON 파싱
+        } catch (e) {
+          // JSON이 아니라면 data는 null 유지
+        }
 
         if (!res.ok) {
           const msg =
-            data && (data.message || data.error)
-              ? data.message || data.error
-              : `요청 실패 (HTTP ${res.status})`;
+            (data && (data.message || data.error)) ||
+            raw ||
+            `요청 실패 (HTTP ${res.status})`;
           throw new Error(msg);
         }
 
-        // ✅ 텍스트 요약
-        const text =
-          data && data.summaryText
-            ? data.summaryText
-            : JSON.stringify(data, null, 2);
+        // ✅ 정상 케이스
+        if (!data) {
+          // 서버가 JSON을 못 내려준 상태 → raw 그대로 보여주고 원인 찾기 쉽게
+          $result.textContent = raw || "(empty response)";
+          $status.textContent = "";
+          return;
+        }
 
-        $result.textContent = text;
+        $result.textContent =
+          data.summaryText ?? JSON.stringify(data, null, 2);
+
+        renderLogos(data.logoCandidates || []);
         $status.textContent = "";
-
-        // ✅ 로고 후보 렌더
-        renderLogos(data?.logoCandidates || []);
       } catch (e) {
         $status.textContent = "";
-        $error.textContent =
-          e.message || "알 수 없는 오류가 발생했어요.";
+        $error.textContent = e?.message || "알 수 없는 오류가 발생했어요.";
       } finally {
         $btn.disabled = false;
       }
