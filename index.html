@@ -177,14 +177,18 @@
           body: JSON.stringify({ bizNo }),
         });
 
-        const raw = await res.text(); // ✅ 먼저 text로 받기
-        let data = null;
+        const raw = await res.text();
+let data = null;
 
-        try {
-          data = raw ? JSON.parse(raw) : null; // ✅ 그 다음 JSON 파싱
-        } catch (e) {
-          // JSON이 아니라면 data는 null 유지
-        }
+// 1) 앞에 '=' 붙는 케이스 제거
+const normalized = (raw || "").trim().replace(/^=\s*/, "");
+
+// 2) 파싱 시도
+try {
+  data = normalized ? JSON.parse(normalized) : null;
+} catch (e) {
+  data = null;
+}
 
         if (!res.ok) {
           const msg =
