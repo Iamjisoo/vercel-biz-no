@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>사업자등록번호 → 회사 요약 + 로고</title>
+  <title>사업자등록번호 → 회사정보 + 웹사이트 선택 → 로고</title>
 
   <style>
     body {
@@ -12,17 +12,30 @@
       background: #fafafa;
       color: #111;
     }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 28px; }
-    h1 { font-size: 22px; margin: 0 0 14px; }
+    .wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 14px;
+    }
     .card {
       background: #fff;
       border: 1px solid #e8e8e8;
       border-radius: 14px;
       padding: 18px;
     }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    input {
-      flex: 1; min-width: 240px;
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    input[type="text"], input[type="url"] {
+      flex: 1;
+      min-width: 240px;
       padding: 12px 14px;
       border: 1px solid #ddd;
       border-radius: 10px;
@@ -37,13 +50,69 @@
       background: #111;
       color: #fff;
     }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .hint { color: #666; font-size: 13px; margin-top: 10px; }
-    .out { margin-top: 14px; white-space: pre-wrap; line-height: 1.65; }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .hint {
+      color: #666;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .out {
+      margin-top: 14px;
+      white-space: pre-wrap;
+      line-height: 1.65;
+    }
     .ok { color: #111; }
     .err { color: #c00; }
-    .footer { color: #888; font-size: 12px; margin-top: 14px; }
 
+    .section {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed #e6e6e6;
+    }
+    .sectionTitle {
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    /* 후보 리스트 */
+    .candidates {
+      display: grid;
+      gap: 10px;
+    }
+    .cand {
+      border: 1px solid #e8e8e8;
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+    .candTop {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .candTitle {
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .candMeta {
+      font-size: 12px;
+      color: #666;
+      word-break: break-all;
+    }
+    .candSnippet {
+      font-size: 13px;
+      color: #333;
+      line-height: 1.45;
+    }
+    .radio {
+      margin-top: 2px;
+    }
+
+    /* 로고 그리드 */
     .logos {
       margin-top: 14px;
       display: grid;
@@ -55,6 +124,7 @@
       border: 1px solid #e8e8e8;
       border-radius: 12px;
       padding: 10px;
+      cursor: pointer;
     }
     .logoImg {
       width: 100%;
@@ -68,46 +138,152 @@
       color: #666;
       word-break: break-all;
     }
-    .logoType { font-weight: 600; color: #111; }
+    .logoType {
+      font-weight: 700;
+      color: #111;
+    }
+
+    .footer {
+      color: #888;
+      font-size: 12px;
+      margin-top: 14px;
+    }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <h1>사업자등록번호 입력 → 회사 요약 + 로고 후보</h1>
+    <h1>사업자등록번호 → 회사정보 + 웹사이트 선택 → 로고 후보</h1>
 
     <div class="card">
       <div class="row">
-        <input id="bizNo" placeholder="예) 6848103629" inputmode="numeric" />
-        <button id="btn">조회</button>
+        <input id="bizNo" type="text" placeholder="예) 6848103629" inputmode="numeric" />
+        <button id="btnLookup">조회</button>
       </div>
-
       <div class="hint">숫자만 입력해도 돼요. (하이픈 자동 제거)</div>
 
       <div id="status" class="hint"></div>
-      <div id="result" class="out ok"></div>
       <div id="error" class="out err"></div>
 
-      <div id="logos" class="logos"></div>
+      <div class="section" id="secCompany" style="display:none;">
+        <div class="sectionTitle">1) 머니핀 기반 회사 정보</div>
+        <div id="summary" class="out ok"></div>
+        <div class="hint">원본(raw)은 필요하면 개발자도구에서 확인하도록 두는 게 보통 더 깔끔해요.</div>
+      </div>
+
+      <div class="section" id="secCandidates" style="display:none;">
+        <div class="sectionTitle">2) 웹사이트 후보 선택</div>
+
+        <div id="candidates" class="candidates"></div>
+
+        <div style="margin-top:12px;">
+          <div class="hint" style="margin-bottom:6px;">후보가 없거나 직접 입력하고 싶으면:</div>
+          <div class="row">
+            <input id="manualUrl" type="url" placeholder="https://example.com" />
+            <button id="btnLogo">선택한 사이트로 로고 추출</button>
+          </div>
+          <div class="hint">라디오 선택이 있으면 그 값이 우선, 없으면 직접 입력 URL을 사용해요.</div>
+        </div>
+      </div>
+
+      <div class="section" id="secLogos" style="display:none;">
+        <div class="sectionTitle">3) 로고 후보</div>
+        <div id="logos" class="logos"></div>
+      </div>
 
       <div class="footer">Powered by n8n + Bizno + Google CSE</div>
     </div>
   </div>
 
   <script>
-    const WEBHOOK_URL =
-      "https://zighangmanager.app.n8n.cloud/webhook/company-summary"; // 네 Production Webhook
+    // ✅ 너의 n8n Webhook URL로 교체
+    const LOOKUP_WEBHOOK_URL = "https://zighangmanager.app.n8n.cloud/webhook/company-summary";
+    const LOGO_WEBHOOK_URL   = "https://zighangmanager.app.n8n.cloud/webhook/company-logo";
 
     const $bizNo = document.getElementById("bizNo");
-    const $btn = document.getElementById("btn");
+    const $btnLookup = document.getElementById("btnLookup");
+    const $btnLogo = document.getElementById("btnLogo");
+
     const $status = document.getElementById("status");
-    const $result = document.getElementById("result");
     const $error = document.getElementById("error");
+
+    const $secCompany = document.getElementById("secCompany");
+    const $secCandidates = document.getElementById("secCandidates");
+    const $secLogos = document.getElementById("secLogos");
+
+    const $summary = document.getElementById("summary");
+    const $candidates = document.getElementById("candidates");
+    const $manualUrl = document.getElementById("manualUrl");
     const $logos = document.getElementById("logos");
+
+    let lastLookupData = null; // lookup 결과 저장
+
+    function setBusy(isBusy, msg = "") {
+      $btnLookup.disabled = isBusy;
+      $btnLogo.disabled = isBusy;
+      $status.textContent = msg;
+    }
+
+    function clearUI() {
+      $error.textContent = "";
+      $summary.textContent = "";
+      $candidates.innerHTML = "";
+      $manualUrl.value = "";
+      $logos.innerHTML = "";
+
+      $secCompany.style.display = "none";
+      $secCandidates.style.display = "none";
+      $secLogos.style.display = "none";
+
+      lastLookupData = null;
+    }
+
+    function renderCandidates(list = []) {
+      $candidates.innerHTML = "";
+
+      if (!Array.isArray(list) || list.length === 0) {
+        $candidates.innerHTML = `<div class="hint">후보가 없어요. 아래에서 직접 입력해 주세요.</div>`;
+        return;
+      }
+
+      list.forEach((c, idx) => {
+        const id = `cand_${idx}`;
+        const wrap = document.createElement("div");
+        wrap.className = "cand";
+
+        wrap.innerHTML = `
+          <div class="candTop">
+            <input class="radio" type="radio" name="website" id="${id}" value="${escapeHtml(c.url || "")}">
+            <div style="flex:1;">
+              <div class="candTitle">${escapeHtml(c.title || "(제목 없음)")}</div>
+              <div class="candMeta">${escapeHtml(c.displayLink || "")} · ${escapeHtml(c.url || "")}</div>
+            </div>
+          </div>
+          <div class="candSnippet">${escapeHtml(c.snippet || "")}</div>
+        `;
+
+        // 카드 클릭 시 라디오 선택
+        wrap.addEventListener("click", (e) => {
+          // 링크 클릭 같은 거 아니면 선택
+          const r = wrap.querySelector("input[type=radio]");
+          if (r) r.checked = true;
+        });
+
+        $candidates.appendChild(wrap);
+      });
+
+      // 첫 번째 후보 기본 선택 (원하면 제거 가능)
+      const first = document.querySelector('input[name="website"]');
+      if (first) first.checked = true;
+    }
 
     function renderLogos(logoCandidates = []) {
       $logos.innerHTML = "";
-      if (!Array.isArray(logoCandidates) || logoCandidates.length === 0) return;
+
+      if (!Array.isArray(logoCandidates) || logoCandidates.length === 0) {
+        $logos.innerHTML = `<div class="hint">로고 후보를 찾지 못했어요.</div>`;
+        return;
+      }
 
       const priority = {
         "jsonld-org-logo": 1,
@@ -129,7 +305,6 @@
 
         const card = document.createElement("div");
         card.className = "logoCard";
-        card.style.cursor = "pointer";
         card.title = "클릭해서 원본 열기";
         card.onclick = () => window.open(c.url, "_blank", "noopener,noreferrer");
 
@@ -142,7 +317,7 @@
 
         const meta = document.createElement("div");
         meta.className = "logoMeta";
-        meta.innerHTML = `<span class="logoType">${c.type || "logo"}</span><br/>${c.url}`;
+        meta.innerHTML = `<span class="logoType">${escapeHtml(c.type || "logo")}</span><br/>${escapeHtml(c.url)}`;
 
         card.appendChild(img);
         card.appendChild(meta);
@@ -150,13 +325,20 @@
       }
     }
 
-    async function run() {
+    function getSelectedHomepageUrl() {
+      const checked = document.querySelector('input[name="website"]:checked');
+      if (checked && checked.value) return checked.value.trim();
+
+      const manual = ($manualUrl.value || "").trim();
+      if (manual) return manual;
+
+      return "";
+    }
+
+    async function lookup() {
       const bizNo = $bizNo.value.replace(/[^0-9]/g, "");
 
-      $result.textContent = "";
-      $error.textContent = "";
-      $status.textContent = "";
-      $logos.innerHTML = "";
+      clearUI();
 
       if (!bizNo) {
         $error.textContent = "사업자등록번호를 입력해주세요.";
@@ -167,61 +349,89 @@
         return;
       }
 
-      $btn.disabled = true;
-      $status.textContent = "조회 중…";
+      setBusy(true, "조회 중…");
 
       try {
-        const res = await fetch(WEBHOOK_URL, {
+        const res = await fetch(LOOKUP_WEBHOOK_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ bizNo }),
         });
 
-        const raw = await res.text();
-let data = null;
-
-// 1) 앞에 '=' 붙는 케이스 제거
-const normalized = (raw || "").trim().replace(/^=\s*/, "");
-
-// 2) 파싱 시도
-try {
-  data = normalized ? JSON.parse(normalized) : null;
-} catch (e) {
-  data = null;
-}
-
+        const data = await res.json().catch(() => null);
         if (!res.ok) {
-          const msg =
-            (data && (data.message || data.error)) ||
-            raw ||
-            `요청 실패 (HTTP ${res.status})`;
-          throw new Error(msg);
+          throw new Error((data && (data.message || data.error)) || `요청 실패 (HTTP ${res.status})`);
         }
 
-        // ✅ 정상 케이스
-        if (!data) {
-          // 서버가 JSON을 못 내려준 상태 → raw 그대로 보여주고 원인 찾기 쉽게
-          $result.textContent = raw || "(empty response)";
-          $status.textContent = "";
-          return;
-        }
+        // n8n이 배열로 주는 경우가 있어서 안전하게 첫 번째 item 사용
+        const item = Array.isArray(data) ? data[0] : data;
 
-        $result.textContent =
-          data.summaryText ?? JSON.stringify(data, null, 2);
+        lastLookupData = item;
 
-        renderLogos(data.logoCandidates || []);
-        $status.textContent = "";
+        $secCompany.style.display = "block";
+        $summary.textContent = item?.summaryText || "(요약 없음)";
+
+        $secCandidates.style.display = "block";
+        renderCandidates(item?.websiteCandidates || []);
+
+        setBusy(false, "");
       } catch (e) {
-        $status.textContent = "";
-        $error.textContent = e?.message || "알 수 없는 오류가 발생했어요.";
-      } finally {
-        $btn.disabled = false;
+        setBusy(false, "");
+        $error.textContent = e.message || "알 수 없는 오류가 발생했어요.";
       }
     }
 
-    $btn.addEventListener("click", run);
+    async function fetchLogos() {
+      $error.textContent = "";
+      $secLogos.style.display = "none";
+      $logos.innerHTML = "";
+
+      const homepageUrl = getSelectedHomepageUrl();
+      if (!homepageUrl) {
+        $error.textContent = "웹사이트를 선택하거나 직접 입력해주세요.";
+        return;
+      }
+
+      setBusy(true, "로고 추출 중…");
+
+      try {
+        const res = await fetch(LOGO_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ homepageUrl }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error((data && (data.message || data.error)) || `요청 실패 (HTTP ${res.status})`);
+        }
+
+        const item = Array.isArray(data) ? data[0] : data;
+
+        $secLogos.style.display = "block";
+        renderLogos(item?.logoCandidates || []);
+
+        setBusy(false, "");
+      } catch (e) {
+        setBusy(false, "");
+        $error.textContent = e.message || "알 수 없는 오류가 발생했어요.";
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    $btnLookup.addEventListener("click", lookup);
+    $btnLogo.addEventListener("click", fetchLogos);
+
     $bizNo.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") run();
+      if (e.key === "Enter") lookup();
     });
   </script>
 </body>
